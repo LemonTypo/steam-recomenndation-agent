@@ -3,6 +3,7 @@ import time
 from dotenv import load_dotenv
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain.tools import tool
 from langchain.agents import create_agent
 from google import genai
 
@@ -18,4 +19,12 @@ model = ChatGoogleGenerativeAI(
     max_tokens=None,
     timeout=None,
     max_retries=2
+)
+
+
+agent = create_agent(
+    model="gemini-3.5-flash",
+    tools=[],
+    system_prompt="",
+    name="recommendation_assistant"
 )
