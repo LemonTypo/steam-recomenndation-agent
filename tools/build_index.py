@@ -9,13 +9,12 @@ load_dotenv()
 
 STEAM_API_KEY = os.getenv("STEAM_API_KEY")
 DATA_DIR = Path("data")
-GAMES_FILE = DATA_DIR / "games.jsonl"
-CHECKPOINT_FILE = DATA_DIR / "checkpoint.json"
+GAMES_FILE = DATA_DIR / "all_games.json"
 
 def fetch_all_steam_games(STEAM_API_KEY):
 
     url = f"https://api.steampowered.com/IStoreService/GetAppList/v1?key={STEAM_API_KEY}"
-    last_app_id = 0
+    last_appid = 0
     all_apps = []
 
     while True:
@@ -25,40 +24,26 @@ def fetch_all_steam_games(STEAM_API_KEY):
             "include_videos": False,
             "include_hardware": False, 
             "max_results": 50000,
-            "last_appid": last_app_id
+            "last_appid": last_appid
         }
 
-        response = requests.get(url, params=query)
-        response = response.json()
-
-
-
-        if last_app_id != response.get("last_appid"):
-            last_app_id = response.get("last_appid")
-
-        all_apps.extend(response["response"]["apps"])
+        response_object = requests.get(url, params=query)
         
+        # Convert response object into "json" (..actually just a python dict) and extract out everything under the "resposne" key
+        response_dictionary = response_object.json()
+        response_dictionary = response_dictionary.get('response')
 
-        print("More Responses?" + str(response["response"]["have_more_results"]))
-
-        if response["response"]["have_more_results"] != True:
-            return all_apps
+        # Check if there are more paginated results, if so, set the new "last_appid" and re-preform the request with the new parameter    
+        if response_dictionary.get('have_more_results') == True:
+                last_appid = response_dictionary.get('last_appid')
+                all_apps.extend(response_dictionary.get('apps'))
+                print ('New last app id = ' + str(last_appid))
+        else:
+            with open ('data/all_games.json', 'w') as f:
+                # Appends the final list of apps to the all_apps dictionary
+                all_apps.extend(response_dictionary.get('apps'))
+                
+                f.write(json.dumps(all_apps, indent=2))
             break
 
-    
-
-
-
-    
-
-    #response = json.dumps(response.json(), indent=2)
-    
-   #with open("data/all_games.json", mode='w') as f:
-   #         f.write(response)
-
-
-
-
 fetch_all_steam_games(STEAM_API_KEY)
-
-    
