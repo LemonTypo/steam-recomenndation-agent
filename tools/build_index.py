@@ -2,6 +2,7 @@ import os
 import json
 import time
 import requests
+import sqlite3
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -33,7 +34,7 @@ def fetch_all_steam_games(STEAM_API_KEY):
         response_dictionary = response_object.json()
         response_dictionary = response_dictionary.get('response')
 
-        # Check if there are more paginated results, if so, set the new "last_appid" and re-preform the request with the new parameter    
+        # Check if there are more paginated results, if so, set the new "last_appid" and re-perform the request with the new parameter    
         if response_dictionary.get('have_more_results') == True:
                 last_appid = response_dictionary.get('last_appid')
                 all_apps.extend(response_dictionary.get('apps'))
@@ -42,8 +43,27 @@ def fetch_all_steam_games(STEAM_API_KEY):
             with open ('data/all_games.json', 'w') as f:
                 # Appends the final list of apps to the all_apps dictionary
                 all_apps.extend(response_dictionary.get('apps'))
-                
                 f.write(json.dumps(all_apps, indent=2))
+
+                # Connect to the database and prepare for... insertion ;)
+                db_connector_object = sqlite3.connect('data/steam_database.db')
+                db_cursor_object = db_connector_object.cursor()
+
+                for app in all_apps:
+                    id = app.get('appid')
+                    name = app.get('name')
+                    last_modified = app.get('last_modified')
+                    
+                    # https://www.geeksforgeeks.org/python/python-sqlite/ | Inserting Variables - https://stackoverflow.com/questions/4360593/python-sqlite-insert-data-from-variables-into-table
+                    # INSERT INTO table_name (column1, column2, column3, ...) VALUES (value1, value2, value3, ...);
+                    db_cursor_object.execute("INSERT OR IGNORE INTO steam_apps (id, name, last_modified) VALUES (?, ?, ?)", (id, name, last_modified))
+        
+            db_connector_object.commit()
+            
+
+            statement = '''SELECT id, name FROM steam_apps'''
+            print(db_cursor_object.execute(statement).fetchmany(50))
+                    
             break
 
 fetch_all_steam_games(STEAM_API_KEY)
