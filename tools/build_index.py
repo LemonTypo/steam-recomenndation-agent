@@ -9,8 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 STEAM_API_KEY = os.getenv("STEAM_API_KEY")
-DATA_DIR = Path("data")
-GAMES_FILE = DATA_DIR / "all_games.json"
+DATABASE_PATH = 'data/steam_database.db'
 
 def fetch_all_steam_games(STEAM_API_KEY):
 
@@ -57,6 +56,7 @@ def fetch_all_steam_games(STEAM_API_KEY):
                     # https://www.geeksforgeeks.org/python/python-sqlite/ | Inserting Variables - https://stackoverflow.com/questions/4360593/python-sqlite-insert-data-from-variables-into-table
                     # INSERT INTO table_name (column1, column2, column3, ...) VALUES (value1, value2, value3, ...);
                     db_cursor_object.execute("INSERT OR IGNORE INTO steam_apps (id, name, last_modified) VALUES (?, ?, ?)", (id, name, last_modified))
+                    db_cursor_object.execute("INSERT OR IGNORE INTO app_tags (id) VALUES (?)", (id))
         
             db_connector_object.commit()
             
@@ -66,4 +66,29 @@ def fetch_all_steam_games(STEAM_API_KEY):
                     
             break
 
-fetch_all_steam_games(STEAM_API_KEY)
+def populate_game_details(STEAM_API_KEY):
+    db_connector_object = sqlite3.connect(DATABASE_PATH)  
+    db_cursor_object = db_connector_object.cursor()
+
+    # Store all app ids currently in the sqlite3 database to a list to loop through
+    all_app_ids = db_connector_object.execute("SELECT id FROM steam_apps")
+
+    # This will take hella long to run due to steam api rate limits - approx. ~20ish hours? 
+    for id in all_app_ids:
+        last_appid = 0
+        url = f"https://store.steampowered.com/api/appdetails?appids={id}"
+
+        response_object = request.get(url)
+        
+
+
+
+
+
+          
+
+
+
+
+populate_game_details(STEAM_API_KEY)
+#fetch_all_steam_games(STEAM_API_KEY)

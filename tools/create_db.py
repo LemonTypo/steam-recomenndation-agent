@@ -16,18 +16,9 @@ create_app_table = """
     );
 """
 
-create_tag_table = """
-    CREATE TABLE IF NOT EXISTS app_tags  (
-        id INTEGER PRIMARY KEY NOT NULL UNIQUE,
-        tags TEXT
-    );
-"""
-
 db_cursor_object.execute(create_app_table)
 db_cursor_object.execute(create_tag_table)
 
 db_connector_object.commit()
 
 db_connector_object.close()
-
-
