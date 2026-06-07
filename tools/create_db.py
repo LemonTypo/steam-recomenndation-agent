@@ -12,13 +12,12 @@ create_app_table = """
         price REAL,
         multiplayer_type TEXT, 
         review_score REAL,
+        details_fetched INTEGER,
         last_modified INTEGER
     );
 """
 
 db_cursor_object.execute(create_app_table)
-db_cursor_object.execute(create_tag_table)
 
 db_connector_object.commit()
-
 db_connector_object.close()
