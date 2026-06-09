@@ -12,6 +12,7 @@ create_app_table = """
         price REAL,
         multiplayer_type TEXT, 
         review_score REAL,
+        release_date TEXT,
         details_fetched INTEGER,
         last_modified INTEGER
     );

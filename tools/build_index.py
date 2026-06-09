@@ -61,9 +61,9 @@ def fetch_all_steam_games(STEAM_API_KEY):
         
             db_connector_object.commit()
             
-
-            statement = '''SELECT id, name FROM steam_apps'''
-            print("Initial Database Build Complete")
+            
+            print("\nInitial Database Population Complete\n")
+            
                     
             break
 
@@ -78,78 +78,85 @@ def populate_game_details(STEAM_API_KEY):
     current_app_count = 1
     total_app_count = len(all_app_ids)
    
+    # This will take hella long to run due to steam api rate limits - approx. ~80ish hours? 
+    print("Starting to fetch game details for each app- this will take roughly " + str(round(int(total_app_count) * 4 / 3600, 2)) + " hours due to steam api rate limits...\n")
 
-    # This will take hella long to run due to steam api rate limits - approx. ~20ish hours? 
+    for (id,) in all_app_ids:
+        print("Currently working on app " + str(current_app_count) + "/" + str(total_app_count) + ". Progress: " + str(round((int(current_app_count) / int(total_app_count)) * 100, 2)) + "%" +" | Hours Remaining = " + str(round((total_app_count - current_app_count) * 4 / 3600, 2)) + " | App ID = " + str(id))
 
-    print("Starting to fetch game details for each app- this will take roughly " + str(total_app_count * 2 / 3600) + " hours due to steam api rate limits...")
-    #for id in all_app_ids: 
-    # (INCLUDE A PROGRESS BAR TO SHOW CURRENT APP NUMBER OUT OF TOTAL NUMBER OF APPS) (ie. Working on app 6/160,000)
-    id = 252490
-    url = f"https://store.steampowered.com/api/appdetails?appids={id}&language=en"
+        current_app_count += 1
 
-    # Make the request to the steam api to get the game details for the current app id. Filter the response to get just the "data" key in the json output
-    response_object = requests.get(url)
-    response_dictionary = response_object.json()
-    response_dictionary = response_dictionary.get(str(id)).get('data')
+        url = f"https://store.steampowered.com/api/appdetails?appids={id}&language=en"
 
-    #### --- Begin assigning relevant variables to game data to be INSERTED into the database --- ####
-    description = response_dictionary.get('detailed_description')
+        # Make the request to the steam api to get the game details for the current app id. Filter the response to get just the "data" key in the json output
+        response_object = requests.get(url)
+        response_dictionary = response_object.json()
+        response_dictionary = response_dictionary.get(str(id)).get('data')
 
-    categories = response_dictionary.get('categories')
-    genres = response_dictionary.get('genres')
+        #### --- Begin assigning relevant variables to game data to be INSERTED into the database --- ####
+        description = response_dictionary.get('detailed_description')
+        categories = response_dictionary.get('categories')
+        genres = response_dictionary.get('genres')
+        release_date = response_dictionary.get('release_date')
 
-    # Where I store the categories and genres for each game which will be stored in the "tags" column of the steam_apps table in the database
-    tag_list = []
+        # Where I store the categories and genres for each game which will be stored in the "tags" column of the steam_apps table in the database
+        tag_list = []
 
-    # Loop through the categories JSON to just retrieve the category name and genre names to add to the tag_list list
-    for category in categories:
-         category_name = category.get('description')
-         tag_list.append(category_name)
-    for genre in genres:
-        genre_name = genre.get('description')
-        tag_list.append(genre_name)
+        # Loop through the categories JSON to just retrieve the category name and genre names to add to the tag_list list
+        for category in categories:
+            category_name = category.get('description')
+            tag_list.append(category_name)
+        for genre in genres:
+            genre_name = genre.get('description')
+            tag_list.append(genre_name)
+        
+        if response_dictionary.get('is_free') != True:
+            price = response_dictionary.get('price_overview', {}).get('final', None)
+        else:
+            price = 0
+
+        time.sleep(2) # Rate Limit
+
+        url = f"https://store.steampowered.com/appreviews/{id}?purchase_type=all&filter=all&language=all"
     
-    if response_dictionary.get('is_free') != True:
-        price = response_dictionary.get('price_overview').get('final_formatted')
-    else:
-        price = 0
+        response_object = requests.get(url)
+        response_dictionary = response_object.json()
 
-    time.sleep(2)
+        review_html = response_dictionary.get('review_score')
 
-    url = f"https://store.steampowered.com/appreviews/{id}?purchase_type=all&filter=all&language=all"
-  
-    response_object = requests.get(url)
-    response_dictionary = response_object.json()
+        # Can't lie, AI generated this regex because...regex
+        review_data = re.findall(r'(\d+)%\s+of the\s+([\d,]+)', str(review_html))
 
-    response_dictionary = response_dictionary.get('review_score')
-    print (response_dictionary)
+        if review_data:
+            review_percentage_positive = review_data[0][0]
+            review_percentage_positive = int(review_percentage_positive) / 100 # Converted to decimal for review_score calculation
+            total_reviews = review_data[0][1]
+            total_reviews = int(total_reviews.replace(',', '')) # Remove commas from the total reviews string and convert to int
 
-    # Can't lie, AI generated this regex because...regex
-    review_data = re.findall(r'(\d+)%\s+of the\s+([\d,]+)', str(response_dictionary))
+            if total_reviews >= 500:
+                review_score = review_percentage_positive
 
-    if review_data:
-        review_percentage_positive = review_data[0][0]
-        review_percentage_positive = int(review_percentage_positive) / 100 # Converted to decimal for review_score calculation
-        total_reviews = review_data[0][1]
-        total_reviews = int(total_reviews.replace(',', '')) # Remove commas from the total reviews string and convert to int
-
-        if total_reviews >= 500:
-            review_score = review_percentage_positive
+            else:
+                review_score = None
 
         else:
             review_score = None
+        
+        release_date = release_date.get('date')
 
-    else:
-        review_score = None
+        #### --- END of assigning relevant variables to game data to be INSERTED into the database --- ####
 
-    #### --- END of assigning relevant variables to game data to be INSERTED into the database --- ####
+        # Write the gathered data to the db
+        db_connector_object = sqlite3.connect('data/steam_database.db')
+        db_cursor_object = db_connector_object.cursor()
+
+        db_cursor_object.execute("UPDATE steam_apps SET description = ?, tags = ?, price = ?, review_score = ?, release_date = ?, details_fetched = 1 WHERE id = ?", (description, json.dumps(tag_list), price, review_score, release_date, id))
+
+        db_connector_object.commit()
+        db_cursor_object.close()
 
 
-    print('ID = ' + str(id))
-    print('Tags = ' + str(tag_list))
-    print('Price = ' + str(price))
-    print('Review Score = ' + str(review_score))
+        time.sleep(2) # Rate Limit
 
-
+fetch_all_steam_games(STEAM_API_KEY)
 populate_game_details(STEAM_API_KEY)
-#fetch_all_steam_games(STEAM_API_KEY)
