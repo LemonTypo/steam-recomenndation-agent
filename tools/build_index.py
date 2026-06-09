@@ -94,10 +94,10 @@ def populate_game_details(STEAM_API_KEY):
         response_dictionary = response_dictionary.get(str(id)).get('data')
 
         #### --- Begin assigning relevant variables to game data to be INSERTED into the database --- ####
-        description = response_dictionary.get('detailed_description')
-        categories = response_dictionary.get('categories')
-        genres = response_dictionary.get('genres')
-        release_date = response_dictionary.get('release_date')
+        description = response_dictionary.get('detailed_description', None)
+        categories = response_dictionary.get('categories', [])
+        genres = response_dictionary.get('genres', [])
+        release_date = response_dictionary.get('release_date', None)
 
         # Where I store the categories and genres for each game which will be stored in the "tags" column of the steam_apps table in the database
         tag_list = []
