@@ -216,3 +216,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Sqlite3 Database
+*.db
+data/steam_database.db
