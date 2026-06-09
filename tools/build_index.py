@@ -163,7 +163,7 @@ def populate_game_details(STEAM_API_KEY):
             db_cursor_object = db_connector_object.cursor()
 
             # Using 'data_fetched = 2' in the database to identify apps that experienced an issue
-            db_cursor_object.execute("UPDATE steam_apps SET details_fetched = 2 WHERE id = ?", (id))
+            db_cursor_object.execute("UPDATE steam_apps SET details_fetched = 2 WHERE id = ?", (id,))
 
             db_connector_object.commit()
             db_cursor_object.close()
