@@ -157,6 +157,8 @@ def populate_game_details(STEAM_API_KEY):
 
 
         time.sleep(2) # Rate Limit
+    
+    print("\nGame Details Population Complete\n")
 
 fetch_all_steam_games(STEAM_API_KEY)
 populate_game_details(STEAM_API_KEY)
