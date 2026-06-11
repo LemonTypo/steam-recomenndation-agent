@@ -10,7 +10,7 @@ load_dotenv()
 STEAM_API_KEY = os.getenv("STEAM_API_KEY")
 
 
-def update_index(STEAM_API_KEY):
+def find_new_ids(STEAM_API_KEY):
 
     db_connector_object = sqlite3.connect("data/steam_database.db")
     db_cursor_object = db_connector_object.cursor()
@@ -59,19 +59,15 @@ def update_index(STEAM_API_KEY):
     for app in all_apps:
         all_app_ids.append(app.get('appid'))
 
-    
-    new_app_ids = set(all_app_ids) - set(current_database_index)
+    # Return a list of all the app ids that are in the steam api but not in the current database index
+    return set(all_app_ids) - set(current_database_index)
 
+def update_index(new_app_ids):
     print("\nDetected " + str(len(new_app_ids)) + " new apps to add to the database...")
-    
-    
 
 
 
+new_app_ids = find_new_ids(STEAM_API_KEY)
 
 
-
-
-    
-
-update_index(STEAM_API_KEY)
+update_index(new_app_ids)
